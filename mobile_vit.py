@@ -203,3 +203,48 @@ class Conv_3x3_bn(tf.keras.layers.Layer):
     config["out_channels"] = self.out_channels
 
     return config
+
+
+class DropPath(tf.keras.layers.Layer):
+    """
+    Per sample stochastic depth when applied in main path of residual blocks
+
+    This is the same as the DropConnect created for EfficientNet, etc networks, however,
+    the original name is misleading as 'Drop Connect' is a different form of dropout in
+    a separate paper...
+    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956
+    Following the usage in `timm` we've changed the name to `drop_path`.
+    """
+
+    def __init__(self, drop_prob=None, **kwargs):
+        super().__init__(**kwargs)
+        self.drop_prob = drop_prob
+        self.keep_prob = 1.0 - self.drop_prob
+
+    def call(self, x, training=False):
+        if not training or not self.drop_prob > 0.0:
+            return x
+
+        # Compute drop_connect tensor
+        shape = (tf.shape(x)[0],) + (1,) * (len(tf.shape(x)) - 1)
+        random_tensor = self.keep_prob + tf.random.uniform(shape, dtype=x.dtype)
+        binary_tensor = tf.floor(random_tensor)
+
+        # Rescale output to preserve batch statistics
+        x = tf.math.divide(x, self.keep_prob) * binary_tensor
+        return x
+
+    def get_config(self):
+        config = super(DropPath, self).get_config()
+        config["drop_prob"] = self.drop_prob
+        return config
+
+
+class LayerScale(tf.keras.layers.Layer):
+    def __init__(self, dim, init_values=1e-5, inplace=False):
+        super().__init__()
+        self.inplace = inplace
+        self.gamma = tf.Variable(init_values * tf.ones(dim), trainable=True)
+
+    def call(self, x):
+        return x.mul_(self.gamma) if self.inplace else x * self.gamma
