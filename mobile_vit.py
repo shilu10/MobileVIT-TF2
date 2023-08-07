@@ -87,6 +87,15 @@ class InvertedResidual(tf.keras.layers.Layer):
         else:
             return self.blocks(x)
 
+    def get_config(self):
+        config = super().get_config()
+        config['stride'] = self.stride
+        config['inp_dims'] = self.inp_dims 
+        config['out_dims'] = self.out_dims 
+        config['expansion'] = self.expansion
+
+        return config
+
 
 class Conv_1x1_bn(tf.keras.layers.Layer):
   def __init__(self, 
