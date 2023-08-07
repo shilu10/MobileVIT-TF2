@@ -472,6 +472,8 @@ class Transformer(tf.keras.layers.Layer):
     return config
 
 
+from typing import * 
+
 class MobileViTBlock(tf.keras.layers.Layer):
     """
     This class defines the `MobileViT block <https://arxiv.org/abs/2110.02178?context=cs.LG>`_
@@ -558,6 +560,9 @@ class MobileViTBlock(tf.keras.layers.Layer):
             )
 
         super(MobileViTBlock, self).__init__(**kwargs)
+        norm_layer = norm_layer_factory(transformer_norm_layer)
+        #transformer_norm_layer = norm_layer_factory("layer_norm")
+        #print(transformer_norm_layer)
         # local representation
         self.local_rep = tf.keras.models.Sequential()
         self.local_rep.add(conv_3x3_in)
@@ -581,7 +586,7 @@ class MobileViTBlock(tf.keras.layers.Layer):
 
 
         self.global_rep = tf.keras.Sequential(global_rep)
-        self.norm = norm_layer_factory(transformer_norm_layer)
+        self.norm = norm_layer(name="block_norm")
 
         self.conv_proj = conv_1x1_out
 
@@ -738,8 +743,11 @@ class MobileViTBlock(tf.keras.layers.Layer):
         # convert feature map to patches
         patches, info_dict = self.unfolding(fm)  # unfolding operation
 
+        print(patches.shape, info_dict)
+
         # learn global representations
         patches = self.global_rep(patches)
+        print(patches.shape, "af gr")
         patches = self.norm(patches)
 
         # [B x Patch x Patches x C] --> [B x C x Patches x Patch]
@@ -748,7 +756,7 @@ class MobileViTBlock(tf.keras.layers.Layer):
         fm = self.conv_proj(fm)
 
         if self.fusion is not None:
-            fm = self.fusion(torch.cat((res, fm), dim=1))
+            fm = self.fusion(tf.concat((res, fm), axis=-1))
         return fm
 
     def call(self, x, *args, **kwargs):
