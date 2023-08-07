@@ -248,3 +248,224 @@ class LayerScale(tf.keras.layers.Layer):
 
     def call(self, x):
         return x.mul_(self.gamma) if self.inplace else x * self.gamma
+
+
+class MLP(tf.keras.layers.Layer):
+    """MLP as used in Vision Transformer, MLP-Mixer and related networks"""
+
+    def __init__(
+        self,
+        hidden_dim: int,
+        projection_dim: int,
+        drop_rate: float,
+        act_layer: str,
+        kernel_initializer: str = "glorot_uniform",
+        bias_initializer: str = "zeros",
+        mlp_bias: bool = False,
+        **kwargs,
+    ):
+        super(MLP, self).__init__(**kwargs)
+        self.hidden_dim = hidden_dim
+        self.projection_dim = projection_dim
+        self.drop_rate = drop_rate
+        self.kernel_initializer = kernel_initializer
+        self.bias_initializer = bias_initializer
+
+        act_layer = act_layer_factory(act_layer)
+
+        self.fc1 = tf.keras.layers.Dense(
+            units=hidden_dim,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            use_bias=mlp_bias,
+            name="fc1",
+        )
+        self.act = act_layer()
+        self.drop1 = tf.keras.layers.Dropout(rate=drop_rate)
+        self.fc2 = tf.keras.layers.Dense(
+            units=projection_dim,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            use_bias=mlp_bias,
+            name="fc2",
+        )
+        self.drop2 = tf.keras.layers.Dropout(rate=drop_rate)
+
+    def call(self, x, training=False):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.drop1(x, training=training)
+        x = self.fc2(x)
+        x = self.drop2(x, training=training)
+        return x
+
+    def get_config(self):
+        config = super(MLP, self).get_config()
+        config["hidden_dim"] = self.hidden_dim
+        config["projection_dim"] = self.projection_dim
+        config["drop_rate"] = self.drop_rate
+        config["kernel_initializer"] = self.kernel_initializer
+        config["bias_initializer"] = self.bias_initializer
+        return config
+
+
+class MultiHeadAttention(tf.keras.layers.Layer):
+    def __init__(self, 
+                 embed_dim, 
+                 output_dim=None,
+                 num_heads=8, 
+                 head_dims=None, 
+                 attn_drop=0., 
+                 proj_drop=0.,  # ffn dropout rate
+                 drop_rate=0.,
+                 attn_bias=True,
+              ):
+      
+        super(MultiHeadAttention, self).__init__()
+        if output_dim is None:
+            output_dim = embed_dim
+
+        assert embed_dim % num_heads == 0, "embed_dim % num_head should be 0"
+
+        # attn layers
+        self.qkv = tf.keras.layers.Dense(
+            units=embed_dim*3,
+            use_bias=attn_bias,
+            name="qkv_weight"
+
+        )
+
+        self.attn_dropout = tf.keras.layers.Dropout(attn_drop)
+        
+        # proj layers
+        self.proj = tf.keras.layers.Dense(
+            units=output_dim,
+            use_bias=attn_bias,
+        )
+
+        self.proj_dropout = tf.keras.layers.Dropout(proj_drop)
+
+        if head_dims is None:
+          self.head_dims = embed_dim // num_heads
+
+        self.scaling = self.head_dims**-0.5
+        self.num_heads = num_heads
+        self.embed_dim = embed_dim
+
+    def __repr__(self):
+        return "{}(head_dim={}, num_heads={}, attn_dropout={})".format(
+            self.__class__.__name__, self.head_dims, self.num_heads, self.attn_dropout.rate
+        )
+
+    def call(self, x, training=False):
+        b, n, c = tf.shape(x)
+        qkv = self.qkv(x)
+
+        qkv = tf.reshape(qkv, shape=(-1, n, 3, self.num_heads, self.head_dims))
+        qkv = tf.transpose(qkv, perm=(2, 0, 3, 1, 4))
+        q, k, v = tf.unstack(qkv)
+
+        q = q * self.scaling
+
+        attn_scores = tf.matmul(q, k, transpose_b=True)
+        attn_probs = tf.nn.softmax(attn_scores)
+        attn_probs = self.attn_dropout(attn_probs, training=training)
+
+        out = tf.matmul(attn_probs, k)
+        out = tf.transpose(out, perm=[0, 2, 1, 3])
+        out = tf.reshape(out, shape=(1, n, c))
+
+        x = self.proj(x)
+        x = self.proj_dropout(x, training=training)
+        return x
+
+
+class Transformer(tf.keras.layers.Layer):
+  def __init__(self, 
+              embed_dim, 
+              ffn_latent_dim,
+              num_heads, 
+              head_dims=None, 
+              qkv_bias=True, 
+              attn_drop=0., 
+              proj_drop=0., 
+              drop_path=0.0,
+              init_values=None, 
+              norm_layer="layer_norm", 
+              act_layer="gelu",
+              **kwargs
+          ):
+      
+    super(Transformer, self).__init__(**kwargs)
+    norm_layer = norm_layer_factory(norm_layer)
+
+    self.attn = MultiHeadAttention(
+          embed_dim=embed_dim,
+          num_heads=num_heads,
+          attn_bias=qkv_bias,
+          attn_drop=attn_drop,
+          proj_drop=proj_drop,
+        )
+        
+    self.mlp = MLP(
+          hidden_dim=ffn_latent_dim,
+          projection_dim=embed_dim,
+          drop_rate=proj_drop,
+          act_layer=act_layer,
+          mlp_bias=True
+        )
+        
+    self.ls_1 = LayerScale(embed_dim, init_values) if init_values else tf.identity
+    self.ls_2 = LayerScale(embed_dim, init_values) if init_values else tf.identity
+
+    self.drop_path_1 = DropPath(drop_path) if drop_path else tf.identity
+    self.drop_path_2 = DropPath(drop_path) if drop_path else tf.identity
+
+    self.norm_1 = norm_layer(name='transformer_norm1')
+    self.norm_2 = norm_layer(name='transformer_norm2')
+
+    self.embed_dim = embed_dim
+    self.ffn_latent_dim = ffn_latent_dim 
+    self.proj_drop = proj_drop
+    self.attn_drop = attn_drop
+
+  def call(self, x, training=False):
+    # res1
+    shortcut = x 
+
+    x = self.norm_1(x)
+    x = self.attn(x)
+    x = self.ls_1(x)
+    x = self.drop_path_1(x)
+
+    x = x + shortcut 
+
+    # res2
+    shortcut = x
+
+    x = self.norm_2(x)
+    x = self.mlp(x)
+    x = self.ls_2(x)
+    x = self.drop_path_2(x)
+
+    x = x + shortcut 
+
+    return x 
+
+  def __repr__(self):
+    return "{}(embed_dim={}, ffn_latent_dim={}, proj_drop={}, attn_drop={}".format(
+            self.__class__.__name__,
+            self.embed_dim,
+            self.ffn_latent_dim,
+            self.proj_drop,
+            self.attn_drop
+      )
+      
+  def get_config(self):
+    config = super(Transformer, self).get_config()
+    config["embed_dim"] = self.embed_dim
+    config['ffn_latent_dim'] = self.ffn_latent_dim
+    config['proj_drop'] = self.proj_drop
+    config['attn_drop'] = self.attn_drop
+
+    return config
