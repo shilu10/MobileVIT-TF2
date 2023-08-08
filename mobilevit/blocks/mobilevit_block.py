@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras 
 import numpy as np 
 from typing import * 
+from .transformer_block import Transformer
 
 
 class MobileViTBlock(tf.keras.layers.Layer):
