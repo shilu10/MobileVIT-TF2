@@ -3,6 +3,8 @@ from tensorflow import keras
 import numpy as np 
 from typing import * 
 from .transformer_block import Transformer
+from ..layers import Conv_3x3_bn, Conv_1x1_bn
+from ..layers import act_layer_factory, norm_layer_factory
 
 
 class MobileViTBlock(tf.keras.layers.Layer):

@@ -72,3 +72,12 @@ class MultiHeadSelfAttention(tf.keras.layers.Layer):
         x = self.proj(x)
         x = self.proj_dropout(x, training=training)
         return x
+
+ 	def get_config(self):
+ 		config = super().get_config()
+
+ 		config['scaling'] = self.scaling
+ 		config['num_heads'] = self.num_heads
+ 		config['embed_dim'] = self.embed_dim
+
+ 		return config

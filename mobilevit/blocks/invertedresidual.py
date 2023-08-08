@@ -1,6 +1,7 @@
 import tensorflow as tf 
 from tensorflow import keras 
 import numpy as np 
+from ..layers import act_layer_factory, norm_layer_factory
 
 
 class InvertedResidual(tf.keras.layers.Layer):

@@ -1,6 +1,7 @@
 import tensorflow as tf 
 from tensorflow import keras 
 import numpy as np 
+from typing import *
 
 
 class Conv_1x1_bn(tf.keras.layers.Layer):
