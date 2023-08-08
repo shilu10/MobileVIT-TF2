@@ -2,6 +2,9 @@ import tensorflow as tf
 from tensorflow import keras 
 import numpy as np 
 from typing import * 
+from ..layers import MultiHeadSelfAttention, MLP, LayerScale, DropPath
+from ..layers import norm_layer_factory, act_layer_factory
+
 
 
 class Transformer(tf.keras.layers.Layer):
@@ -23,7 +26,7 @@ class Transformer(tf.keras.layers.Layer):
     super(Transformer, self).__init__(**kwargs)
     norm_layer = norm_layer_factory(norm_layer)
 
-    self.attn = MultiHeadAttention(
+    self.attn = MultiHeadSelfAttention(
           embed_dim=embed_dim,
           num_heads=num_heads,
           attn_bias=qkv_bias,
