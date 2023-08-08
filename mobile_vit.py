@@ -472,8 +472,6 @@ class Transformer(tf.keras.layers.Layer):
     return config
 
 
-from typing import * 
-
 class MobileViTBlock(tf.keras.layers.Layer):
     """
     This class defines the `MobileViT block <https://arxiv.org/abs/2110.02178?context=cs.LG>`_
@@ -647,7 +645,7 @@ class MobileViTBlock(tf.keras.layers.Layer):
         patch_w, patch_h = self.patch_w, self.patch_h  # pre-defined patch_sizes
         patch_area = int(patch_w * patch_h)
         batch_size, orig_h, orig_w, in_channels = tf.shape(feature_map) # shape of the feature map
-       
+
         new_h = int(math.ceil(orig_h / self.patch_h) * self.patch_h)
         new_w = int(math.ceil(orig_w / self.patch_w) * self.patch_w)
 
@@ -656,13 +654,15 @@ class MobileViTBlock(tf.keras.layers.Layer):
 
         interpolate = False
         if new_w != orig_w or new_h != orig_h:
+            feature_map = tf.transpose(tf.transpose(feature_map, (0, 1, 3, 2)), (0, 3, 2, 1))
             # Note: Padding can be done, but then it needs to be handled in attention function.
             feature_map = tf.image.resize(
-                feature_map, 
-                size=(new_h, new_w), 
-                method=tf.image.ResizeMethod.BILINEAR, 
+                feature_map,
+                size=(new_h, new_w),
+                method=tf.image.ResizeMethod.BILINEAR,
             )
             interpolate = True
+            feature_map = tf.transpose(tf.transpose(feature_map, (0, 3, 2, 1)), (0, 1, 3, 2))
 
         # number of patches along width and height
         num_patch_w = new_w // patch_w  # n_w
@@ -725,29 +725,26 @@ class MobileViTBlock(tf.keras.layers.Layer):
             feature_map, (batch_size, channels, num_patch_h * self.patch_h, num_patch_w * self.patch_w)
         )
         if info_dict["interpolate"]:
-            feature_map = F.interpolate(
+            # transposing to attend the interpolation
+            feature_map = tf.transpose(tf.transpose(feature_map, (0, 1, 3, 2)), (0, 3, 2, 1))
+            feature_map = tf.image.resize(
                 feature_map,
                 size=info_dict["orig_size"],
-                mode="bilinear",
-                align_corners=False,
+                method="bilinear",
             )
+
+            return feature_map
         return tf.transpose(tf.transpose(feature_map, (0, 1, 3, 2)), (0, 3, 2, 1))
 
     def forward_spatial(self, x):
         res = x
-
         fm = self.local_rep(x)
-
-        print(fm.shape)
 
         # convert feature map to patches
         patches, info_dict = self.unfolding(fm)  # unfolding operation
 
-        print(patches.shape, info_dict)
-
         # learn global representations
         patches = self.global_rep(patches)
-        print(patches.shape, "af gr")
         patches = self.norm(patches)
 
         # [B x Patch x Patches x C] --> [B x C x Patches x Patch]
