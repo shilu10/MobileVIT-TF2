@@ -1,9 +1,3 @@
-import tensorflow as tf 
-from tensorflow import keras 
-import numpy as np 
-from typing import * 
-
-
 from tensorflow import keras
 import tensorflow as tf
 import numpy as np
@@ -22,6 +16,9 @@ def act_layer_factory(act_layer: str):
 
     if act_layer == "square_relu":
       return SquaredReLU
+
+    if act_layer == "silu":
+      return lambda **kwargs: tf.keras.layers.Activation(tf.nn.silu, **kwargs)
 
     else:
         raise ValueError(f"Unknown activation: {act_layer}.")
