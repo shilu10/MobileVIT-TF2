@@ -14,7 +14,7 @@ class MobileVIT(tf.keras.models.Model):
     out_channels = 16
 
    # mobilevit_config = get_configuration(model_variant)
-   mobilevit_config = config
+    mobilevit_config = config
 
     self.model_conf_dict = dict()
 
