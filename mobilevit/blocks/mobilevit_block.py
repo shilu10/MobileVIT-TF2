@@ -297,3 +297,121 @@ class MobileViTBlock(tf.keras.layers.Layer):
             return self.forward_spatial(x)
         else:
             raise NotImplementedError
+
+
+class MobileVitV2Block(tf.keras.layers.Layer):
+    """
+    This class defines the `MobileViTv2 block <>`_
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        attn_unit_dim: int,
+        mlp_ratio: Optional[Union[Sequence[Union[int, float]], int, float]] = 2.0,
+        n_attn_blocks: Optional[int] = 2,
+        attn_dropout: Optional[float] = 0.0,
+        dropout: Optional[float] = 0.0,
+        ffn_dropout: Optional[float] = 0.0,
+        patch_h: Optional[int] = 8,
+        patch_w: Optional[int] = 8,
+        conv_ksize: Optional[int] = 3,
+        dilation: Optional[int] = 1,
+        attn_norm_layer: Optional[str] = "layer_norm",
+        *args,
+        **kwargs
+    ):
+
+        cnn_out_dim = attn_unit_dim
+        # local representation
+        conv_3x3_in = Conv_3x3_bn(
+            in_channels=in_channels,
+            out_channels=in_channels,
+            kernel_size=conv_ksize,
+            stride=1,
+            use_norm=True,
+            use_act=True,
+            dilation=dilation,
+            groups=in_channels,
+          )
+
+        conv_1x1_in = Conv_1x1_bn(
+            in_channels=in_channels,
+            out_channels=cnn_out_dim,
+            kernel_size=1,
+            stride=1,
+            use_norm=False,
+            use_act=False,
+          )
+        
+        transformer_norm_layer = norm_layer_factory(attn_norm_layer)
+
+        super(MobileVitV2Block, self).__init__()
+        self.local_rep = tf.keras.Sequential([conv_3x3_in, conv_1x1_in])
+
+        self.global_rep = tf.keras.Sequential([
+            LinearTransformerBlock(
+                attn_unit_dim,
+                mlp_ratio=mlp_ratio,
+                attn_drop=attn_dropout,
+                dropout=dropout,
+                drop_path=0.0,
+                norm_layer=attn_norm_layer
+            )
+            for _ in range(n_attn_blocks)
+        ])
+        self.norm = transformer_norm_layer()
+
+        self.conv_proj = Conv_1x1_bn(
+                      in_channels=cnn_out_dim,
+                      out_channels=in_channels,
+                      kernel_size=1,
+                      stride=1,
+                      use_norm=True,
+                      use_act=False,
+                    )
+
+        self.patch_h = patch_h
+        self.patch_w = patch_w
+        self.patch_area = self.patch_w * self.patch_h
+
+        self.cnn_in_dim = in_channels
+        self.cnn_out_dim = cnn_out_dim
+        self.transformer_in_dim = attn_unit_dim
+        self.dropout = dropout
+        self.attn_dropout = attn_dropout
+        self.ffn_dropout = ffn_dropout
+        self.n_blocks = n_attn_blocks
+        self.conv_ksize = conv_ksize
+
+    def call(self, x: tf.Tensor) -> tf.Tensor:
+        B, H, W, C = x.shape
+        patch_h, patch_w = self.patch_h, self.patch_w
+        new_h, new_w = math.ceil(H / patch_h) * patch_h, math.ceil(W / patch_w) * patch_w
+        num_patch_h, num_patch_w = new_h // patch_h, new_w // patch_w  # n_h, n_w
+        num_patches = num_patch_h * num_patch_w  # N
+        if new_h != H or new_w != W:
+            print('in')
+            x = tf.image.resize(x, size=(new_h, new_w), method="bilinear")
+
+        # Local representation
+        x = self.local_rep(x)
+
+        # Unfold (feature map -> patches), [B, H, W, C] -> [B, P, N, C]
+        B = 1 if B is None else B
+        C = x.shape[-1]
+        x = tf.reshape(x, (B, C, num_patch_h, patch_h, num_patch_w, patch_w))
+        x = tf.transpose(x, perm=(0, 1, 3, 5, 2, 4))
+        x = tf.reshape(x, (B,-1, num_patches, C))
+
+        # Global representations
+        x = self.global_rep(x)
+        x = self.norm(x)
+
+        # Fold (patches -> feature map), [B, P, N, C] --> [B, H, W, C]
+        x = tf.reshape(x, (B, C, patch_h, patch_w, num_patch_h, num_patch_w))
+        x = tf.transpose(x, perm=(0, 1, 4, 2, 5, 3))
+        x = tf.reshape(x, (B, num_patch_h * patch_h, num_patch_w * patch_w, C))
+
+        x = self.conv_proj(x)
+        return x
