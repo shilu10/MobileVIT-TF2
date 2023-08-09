@@ -67,6 +67,8 @@ class Conv_3x3_bn(tf.keras.layers.Layer):
               stride=1,
               use_norm=True,
               use_act=True,
+              groups=None,
+              dilation=None,
               **kwargs,
           ):
     super(Conv_3x3_bn, self).__init__(**kwargs)
@@ -77,13 +79,18 @@ class Conv_3x3_bn(tf.keras.layers.Layer):
     self.use_norm = use_norm
     self.use_act = use_act
 
+   
     self.conv = tf.keras.layers.Conv2D(
-        filters = out_channels,
-        kernel_size = self.kernel_size,
-        strides = self.stride,
-        padding = "same",
-        use_bias = False
-    )
+          filters = out_channels,
+          kernel_size = self.kernel_size,
+          strides = self.stride,
+          padding = "same",
+          use_bias = False,
+          groups = 1 if groups is None else groups,
+          dilation_rate = 1 if dilation is None else dilation,
+      )
+
+
 
     if use_norm:
       self.norm = tf.keras.layers.BatchNormalization()
