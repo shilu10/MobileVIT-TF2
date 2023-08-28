@@ -77,8 +77,8 @@ class MobileVITLayer(tf.keras.layers.Layer):
 
         interpolate = new_width != orig_width or new_height != orig_height
         if interpolate:
-        # Note: Padding can be done, but then it needs to be handled in attention function.
-        features = tf.image.resize(features, size=(new_height, new_width), method="bilinear")
+            # Note: Padding can be done, but then it needs to be handled in attention function.
+            features = tf.image.resize(features, size=(new_height, new_width), method="bilinear")
 
         # number of patches along width and height
         num_patch_width = new_width // patch_width
@@ -131,14 +131,14 @@ class MobileVITLayer(tf.keras.layers.Layer):
         features = tf.transpose(features, perm=(0, 2, 3, 1))
 
         if info_dict["interpolate"]:
-        features = tf.image.resize(features, size=info_dict["orig_size"], method="bilinear")
+            features = tf.image.resize(features, size=info_dict["orig_size"], method="bilinear")
 
         return features
 
     def call(self, features: tf.Tensor, training: bool = False) -> tf.Tensor:
         # reduce spatial dimensions if needed
         if self.downsampling_layer:
-        features = self.downsampling_layer(features, training=training)
+            features = self.downsampling_layer(features, training=training)
 
         shortcut = features
 
