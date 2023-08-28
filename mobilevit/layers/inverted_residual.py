@@ -4,6 +4,7 @@ import numpy as np
 from ml_collections import ConfigDict 
 from typing import * 
 from .conv_layers import MobileViTConvLayer
+from .factory import act_layer_factory, norm_layer_factory
 
 
 class InvertedResidualLayer(tf.keras.layers.Layer):

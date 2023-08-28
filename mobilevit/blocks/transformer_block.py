@@ -3,7 +3,7 @@ from tensorflow import keras
 import numpy as np 
 from typing import * 
 from ml_collections import ConfigDict 
-from .vision_transformer import TFVITTransformerLayer
+from .vision_transformer import TFVITTransformerLayer, act_layer_factory, norm_layer_factory
 
 
 class MobileViTTransformer(tf.keras.Model):

@@ -3,7 +3,7 @@ from tensorflow import keras
 import numpy as np 
 from typing import * 
 from ml_collections import ConfigDict 
-from ..layers import LayerScale, StochasticDepth, MLP
+from ..layers import LayerScale, StochasticDepth, MLP, act_layer_factory, norm_layer_factory
 
 
 # self_attention (mult-head self attention)
