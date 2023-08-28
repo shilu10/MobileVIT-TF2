@@ -3,10 +3,12 @@ from tensorflow import keras
 import numpy as np 
 from typing import * 
 from .factory import act_layer_factory, norm_layer_factory
+from ml_collections import ConfigDict
 
 
 class MLP(tf.keras.layers.Layer):
     def __init__(self,
+               config: ConfigDict, 
                hidden_units = [768, 192],
                **kwargs):
         super(MLP, self).__init__(**kwargs)
