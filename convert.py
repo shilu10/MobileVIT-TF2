@@ -1,50 +1,99 @@
-# conv stem
-# convolution
-tf_model.layers[0].conv = modify_tf_block(
-    tf_model.layers[0].conv,
-    pt_model_dict['mobilevit.conv_stem.convolution.weight'],
+from .utils import *
+from tensorflow import keras 
+import tensorflow as tf 
+import numpy as np 
+from typing import * 
+from ml_collections import ConfigDict 
+import tqdm, sys, os 
+from transformers import MobileViTForImageClassification
+from .base_config import get_base_config
+from .mobilevit import MobileVITModel
 
-)
 
-# normalization
-tf_model.layers[0].norm = modify_tf_block(
-    tf_model.layers[0].norm,
-    pt_model_dict['mobilevit.conv_stem.normalization.weight'],
-    pt_model_dict['mobilevit.conv_stem.normalization.bias'],
-)
+def port(model_type: str = 'mobilevit_small', 
+        model_savepath: str =  '.', 
+        include_top: bool = True):
+    
+    model_ckpt = {
+        'mobilevit_small': "apple/mobilevit-small",
+        'mobilevit_xsmall': "apple/mobilevit-x-small",
+        'mobilevit_xxsmall': 'apple/mobilevit-xx-small'
+    }
 
-# running mean and variance
-moving_mean = tf.Variable(pt_model_dict['mobilevit.conv_stem.normalization.running_mean'])
-tf_model.layers[0].norm.moving_mean.assign(moving_mean)
-moving_variance = tf.Variable(pt_model_dict['mobilevit.conv_stem.normalization.running_var'])
-tf_model.layers[0].norm.moving_variance.assign(moving_variance)
+    print("Instantiating PyTorch model...")
+    pt_model = MobileViTForImageClassification.from_pretrained(model_ckpt[model_type])
 
-# conv_1x1_exp
-tf_model.layers[-3].conv = modify_tf_block(
-    tf_model.layers[-3].conv,
-    pt_model_dict['mobilevit.conv_1x1_exp.convolution.weight'],
+    pt_model.eval()
 
-)
+    # intantiating tensorflow model
+    config = get_base_config()
+    tf_model = MobileVITModel(config)
+    image_dim = 256
+    dummy_inputs = tf.ones((1, image_dim, image_dim, 3))
+    _ = tf_model(dummy_inputs)[0]
 
-# normalization
-tf_model.layers[-3].norm = modify_tf_block(
-    tf_model.layers[-3].norm,
-    pt_model_dict['mobilevit.conv_1x1_exp.normalization.weight'],
-    pt_model_dict['mobilevit.conv_1x1_exp.normalization.bias'],
-)
+    # conv stem
+    # convolution
+    tf_model.layers[0].conv = modify_tf_block(
+        tf_model.layers[0].conv,
+        pt_model_dict['mobilevit.conv_stem.convolution.weight'],
 
-# running mean and variance
-moving_mean = tf.Variable(pt_model_dict['mobilevit.conv_1x1_exp.normalization.running_mean'])
-tf_model.layers[-3].norm.moving_mean.assign(moving_mean)
-moving_variance = tf.Variable(pt_model_dict['mobilevit.conv_1x1_exp.normalization.running_var'])
-tf_model.layers[-3].norm.moving_variance.assign(moving_variance)
+    )
 
-# classification head
-tf_model.layers[-1] = modify_tf_block(
-    tf_model.layers[-1],
-    pt_model_dict['classifier.weight'],
-    pt_model_dict['classifier.bias'],
-)
+    # normalization
+    tf_model.layers[0].norm = modify_tf_block(
+        tf_model.layers[0].norm,
+        pt_model_dict['mobilevit.conv_stem.normalization.weight'],
+        pt_model_dict['mobilevit.conv_stem.normalization.bias'],
+    )
+
+    # running mean and variance
+    moving_mean = tf.Variable(pt_model_dict['mobilevit.conv_stem.normalization.running_mean'])
+    tf_model.layers[0].norm.moving_mean.assign(moving_mean)
+    moving_variance = tf.Variable(pt_model_dict['mobilevit.conv_stem.normalization.running_var'])
+    tf_model.layers[0].norm.moving_variance.assign(moving_variance)
+
+    # conv_1x1_exp
+    tf_model.layers[-3].conv = modify_tf_block(
+        tf_model.layers[-3].conv,
+        pt_model_dict['mobilevit.conv_1x1_exp.convolution.weight'],
+
+    )
+
+    # normalization
+    tf_model.layers[-3].norm = modify_tf_block(
+        tf_model.layers[-3].norm,
+        pt_model_dict['mobilevit.conv_1x1_exp.normalization.weight'],
+        pt_model_dict['mobilevit.conv_1x1_exp.normalization.bias'],
+    )
+
+    # running mean and variance
+    moving_mean = tf.Variable(pt_model_dict['mobilevit.conv_1x1_exp.normalization.running_mean'])
+    tf_model.layers[-3].norm.moving_mean.assign(moving_mean)
+    moving_variance = tf.Variable(pt_model_dict['mobilevit.conv_1x1_exp.normalization.running_var'])
+    tf_model.layers[-3].norm.moving_variance.assign(moving_variance)
+
+    if include_top:
+        # classification head
+        tf_model.layers[-1] = modify_tf_block(
+            tf_model.layers[-1],
+            pt_model_dict['classifier.weight'],
+            pt_model_dict['classifier.bias'],
+        )
+
+    for indx, block in enumerate(tf_model.layers[1: 1+5]):
+        modify_mobilenet_and_mobilevit_blocks(block, indx, pt_model_dict)
+
+    print("Porting successful, serializing TensorFlow model...")
+
+
+    save_path = os.path.join(model_savepath, model_type) 
+    save_path = save_path if include_top else save_path + "_feature_extractor"
+
+    tf_model.save_weights(save_path + ".h5")
+
+    print(f"TensorFlow model weights serialized at: {save_path}")
+
 
 
 def modify_invertedres_block(block, pt_model_dict, block_name):
