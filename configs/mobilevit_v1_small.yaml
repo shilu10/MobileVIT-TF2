@@ -1,0 +1,4 @@
+model_type: "mobilevit-small"
+hidden_sizes: [144, 192, 240]
+neck_hidden_sizes: [16, 32, 64, 96, 128, 160, 640]
+expand_ratio: 4.0
