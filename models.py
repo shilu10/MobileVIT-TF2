@@ -4,14 +4,14 @@ import yaml, os
 import tensorflow as tf 
 
 
-def load_mobilevit_v1_small() -> tf.keras.Model:
+def load_mobilevit_v1_small(is_feature_extractor=False) -> tf.keras.Model:
     config_file_path = f"configs/mobilevit_v1_small.yaml"
     with open(config_file_path, "r") as f:
         data = yaml.safe_load(f)
 
     print("Instantiating Tensorflow model...")
     config = get_base_config(
-            include_top = include_top,
+            include_top = not is_feature_extractor,
             hidden_sizes = data.get('hidden_sizes'),
             neck_hidden_sizes = data.get('neck_hidden_sizes'),
             expand_ratio = data.get('expand_ratio')
@@ -32,7 +32,7 @@ def load_mobilevit_v1_xsmall() -> tf.keras.Model:
 
     print("Instantiating Tensorflow model...")
     config = get_base_config(
-            include_top = include_top,
+            include_top = not is_feature_extractor,
             hidden_sizes = data.get('hidden_sizes'),
             neck_hidden_sizes = data.get('neck_hidden_sizes'),
             expand_ratio = data.get('expand_ratio')
@@ -53,7 +53,7 @@ def load_mobilevit_v1_xxsmall() -> tf.keras.Model:
 
     print("Instantiating Tensorflow model...")
     config = get_base_config(
-            include_top = include_top,
+            include_top = not is_feature_extractor,
             hidden_sizes = data.get('hidden_sizes'),
             neck_hidden_sizes = data.get('neck_hidden_sizes'),
             expand_ratio = data.get('expand_ratio')
