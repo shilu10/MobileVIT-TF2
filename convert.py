@@ -20,7 +20,7 @@ def port(model_type: str = 'mobilevit_v1_small',
         'mobilevit_v1_small': "apple/mobilevit-small",
         'mobilevit_v1_xsmall': "apple/mobilevit-x-small",
         'mobilevit_v1_xxsmall': 'apple/mobilevit-xx-small'
-    }
+      }
 
     print("Instantiating PyTorch model...")
     pt_model = MobileViTForImageClassification.from_pretrained(model_ckpt[model_type])
@@ -106,8 +106,7 @@ def port(model_type: str = 'mobilevit_v1_small',
 
     tf_model.save_weights(save_path + ".h5")
 
-    print(f"TensorFlow model weights serialized at: {save_path}")
-
+    print(f"TensorFlow model weights serialized at: {save_path}\n")
 
 
 def modify_invertedres_block(block, pt_model_dict, block_name):
