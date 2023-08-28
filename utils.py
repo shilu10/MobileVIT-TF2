@@ -2,14 +2,8 @@ import numpy as np
 from tensorflow import keras 
 import tensorflow as tf 
 from typing import *
-
-
-# copied and modified from https://github.com/sayakpaul/deit-tf/blob/main/utils/helpers.py
 from copy import deepcopy
 from typing import Dict, Tuple
-
-import numpy as np
-import tensorflow as tf
 
 
 def conv_transpose(w: np.ndarray) -> np.ndarray:
