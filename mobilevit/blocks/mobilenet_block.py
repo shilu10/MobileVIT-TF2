@@ -32,7 +32,7 @@ class MobileNetBlock(tf.keras.Model):
         )
       in_channels = out_channels 
   
-    self.layers = layers 
+    self._layers = layers 
     self.out_channels = out_channels 
     self.stride = stride
     self.num_stages = num_stages 
@@ -41,7 +41,7 @@ class MobileNetBlock(tf.keras.Model):
            x: tf.Tensor, 
            training: bool = False) -> tf.Tensor:
   
-    for layer_module in self.layers:
+    for layer_module in self._layers:
       x = layer_module(x, training=training)
 
     return x 
