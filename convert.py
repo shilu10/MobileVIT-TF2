@@ -4,20 +4,22 @@ import tensorflow as tf
 import numpy as np 
 from typing import * 
 from ml_collections import ConfigDict 
-import tqdm, sys, os 
+import tqdm, sys, os, yaml
 from transformers import MobileViTForImageClassification
 from .base_config import get_base_config
 from .mobilevit import MobileVITModel
+from .mobilevit.blocks import MobileNetBlock
+from .mobilevit.blocks import MobileVITLayer
 
 
-def port(model_type: str = 'mobilevit_small', 
+def port(model_type: str = 'mobilevit_v1_small', 
         model_savepath: str =  '.', 
         include_top: bool = True):
     
     model_ckpt = {
-        'mobilevit_small': "apple/mobilevit-small",
-        'mobilevit_xsmall': "apple/mobilevit-x-small",
-        'mobilevit_xxsmall': 'apple/mobilevit-xx-small'
+        'mobilevit_v1_small': "apple/mobilevit-small",
+        'mobilevit_v1_xsmall': "apple/mobilevit-x-small",
+        'mobilevit_v1_xxsmall': 'apple/mobilevit-xx-small'
     }
 
     print("Instantiating PyTorch model...")
@@ -26,7 +28,17 @@ def port(model_type: str = 'mobilevit_small',
     pt_model.eval()
 
     # intantiating tensorflow model
-    config = get_base_config()
+    config_file_path = f"configs/{model_type}.yaml"
+    with open(config_file_path, "r") as f:
+        data = yaml.safe_load(f)
+
+    config = get_base_config(
+            include_top = include_top,
+            hidden_sizes = data.get('hidden_sizes'),
+            neck_hidden_sizes = data.get('neck_hidden_sizes'),
+            expand_ratio = data.get('expand_ratio')
+    )
+
     tf_model = MobileVITModel(config)
     image_dim = 256
     dummy_inputs = tf.ones((1, image_dim, image_dim, 3))
@@ -290,6 +302,5 @@ def modify_mobilenet_and_mobilevit_blocks(block, block_indx, pt_model_dict):
     block.fusion.norm.moving_variance.assign(moving_var)
 
 
-for indx, block in enumerate(tf_model.layers[1: 1+5]):
-  modify_mobilenet_and_mobilevit_blocks(block, indx, pt_model_dict)
+
   
