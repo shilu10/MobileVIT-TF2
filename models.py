@@ -25,7 +25,7 @@ def load_mobilevit_v1_small(is_feature_extractor=False) -> tf.keras.Model:
     return tf_model 
 
 
-def load_mobilevit_v1_xsmall() -> tf.keras.Model:
+def load_mobilevit_v1_xsmall(is_feature_extractor=False) -> tf.keras.Model:
     config_file_path = f"configs/mobilevit_v1_xsmall.yaml"
     with open(config_file_path, "r") as f:
         data = yaml.safe_load(f)
@@ -46,7 +46,7 @@ def load_mobilevit_v1_xsmall() -> tf.keras.Model:
     return tf_model
 
 
-def load_mobilevit_v1_xxsmall() -> tf.keras.Model:
+def load_mobilevit_v1_xxsmall(is_feature_extractor=False) -> tf.keras.Model:
     config_file_path = f"configs/mobilevit_v1_xxsmall.yaml"
     with open(config_file_path, "r") as f:
         data = yaml.safe_load(f)
