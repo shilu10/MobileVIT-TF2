@@ -24,14 +24,16 @@ def port(model_type: str = 'mobilevit_v1_small',
 
     print("Instantiating PyTorch model...")
     pt_model = MobileViTForImageClassification.from_pretrained(model_ckpt[model_type])
-
     pt_model.eval()
+    pt_model_dict = pt_model.state_dict()
+    pt_model_dict = {k: np.array(pt_model_dict[k]) for k in pt_model_dict.keys()}
 
     # intantiating tensorflow model
     config_file_path = f"configs/{model_type}.yaml"
     with open(config_file_path, "r") as f:
         data = yaml.safe_load(f)
 
+    print("Instantiating Tensorflow model...")
     config = get_base_config(
             include_top = include_top,
             hidden_sizes = data.get('hidden_sizes'),
