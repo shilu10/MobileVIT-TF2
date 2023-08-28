@@ -25,15 +25,15 @@ class MobileVITLayer(tf.keras.layers.Layer):
 
         self.downsampling_layer = None
         if stride == 2:
-        self.downsampling_layer = InvertedResidualLayer(
-                        config = config,
-                        in_channels = in_channels,
-                        out_channels = out_channels,
-                        dilation = dilation // 2 if dilation > 1 else 1,
-                        stride = stride if dilation == 1 else 1,
-                        name = "downsampling_layer"
-                    )
-        in_channels = out_channels
+            self.downsampling_layer = InvertedResidualLayer(
+                            config = config,
+                            in_channels = in_channels,
+                            out_channels = out_channels,
+                            dilation = dilation // 2 if dilation > 1 else 1,
+                            stride = stride if dilation == 1 else 1,
+                            name = "downsampling_layer"
+                        )
+            in_channels = out_channels
 
         self.conv_kxk = MobileViTConvLayer(
                 config=config,
