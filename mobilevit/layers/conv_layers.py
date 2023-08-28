@@ -17,7 +17,7 @@ class MobileViTConvLayer(tf.keras.layers.Layer):
                bias: bool = False, 
                dilation: int = 1, 
                use_norm: bool = True, 
-               use_act: Union[bool, str] = True, 
+               use_act: bool | str = True, 
                **kwargs)-> None:
     super(MobileViTConvLayer, self).__init__(**kwargs)
     self.config = config 

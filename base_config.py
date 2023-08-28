@@ -5,8 +5,8 @@ from typing import *
 
 
 def get_base_config(include_top: bool = True, 
-                    hidden_sizes: Union(List, Tuple) = [144, 192, 240],
-                    neck_hidden_sizes: Union(List, Tuple) = [16, 32, 64, 96, 128, 160, 640], 
+                    hidden_sizes: List | Tuple = [144, 192, 240],
+                    neck_hidden_sizes: List | Tuple = [16, 32, 64, 96, 128, 160, 640], 
                     expand_ratio: float = 4.0
                 ):
 
