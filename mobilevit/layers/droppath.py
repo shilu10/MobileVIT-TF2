@@ -4,36 +4,31 @@ import numpy as np
 from typing import * 
 
 
-class DropPath(tf.keras.layers.Layer):
-    """
-    Per sample stochastic depth when applied in main path of residual blocks
+class StochasticDepth(tf.keras.layers.Layer):
+    def __init__(self,
+                 drop_prop: float = 0.0,
+                 **kwargs)-> tf.keras.layers.Layer:
 
-    This is the same as the DropConnect created for EfficientNet, etc networks, however,
-    the original name is misleading as 'Drop Connect' is a different form of dropout in
-    a separate paper...
-    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956
-    Following the usage in `timm` we've changed the name to `drop_path`.
-    """
+        super(StochasticDepth, self).__init__(**kwargs)
+        self.drop_prob = drop_prop
 
-    def __init__(self, drop_prob=None, **kwargs):
-        super().__init__(**kwargs)
-        self.drop_prob = drop_prob
-        self.keep_prob = 1.0 - self.drop_prob
-
-    def call(self, x, training=False):
-        if not training or not self.drop_prob > 0.0:
-            return x
-
-        # Compute drop_connect tensor
-        shape = (tf.shape(x)[0],) + (1,) * (len(tf.shape(x)) - 1)
-        random_tensor = self.keep_prob + tf.random.uniform(shape, dtype=x.dtype)
-        binary_tensor = tf.floor(random_tensor)
-
-        # Rescale output to preserve batch statistics
-        x = tf.math.divide(x, self.keep_prob) * binary_tensor
+    def call(self,
+             x: tf.Tensor,
+             training: bool = None) -> tf.Tensor:
+        if training:
+            keep_prob = 1 - self.drop_prob
+            shape = (tf.shape(x)[0],) + (1,) * (len(tf.shape(x)) - 1)
+            random_tensor = keep_prob + tf.random.uniform(shape, 0, 1)
+            random_tensor = tf.floor(random_tensor)
+            return (x / keep_prob) * random_tensor
         return x
 
     def get_config(self):
-        config = super(DropPath, self).get_config()
-        config["drop_prob"] = self.drop_prob
-        return config
+      config = super().get_config()
+      #config['drop_prob'] = self.drop_prob
+
+      return config
+
+    @classmethod
+    def from_config(cls, config):
+      return cls(**config)
