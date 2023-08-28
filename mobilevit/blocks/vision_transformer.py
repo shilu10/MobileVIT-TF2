@@ -7,6 +7,7 @@ from ..layers import LayerScale, StochasticDepth, MLP, act_layer_factory, norm_l
 import os, sys, math
 
 
+
 # self_attention (mult-head self attention)
 class TFViTSelfAttention(tf.keras.layers.Layer):
     def __init__(self,
@@ -233,7 +234,7 @@ class TFVITTransformerLayer(tf.keras.layers.Layer):
         self.config = config
         self.attention = TFViTAttention(config, hidden_size)
         #self.mlp = mlp(self.config.dropout_rate, mlp_units)
-        self.mlp = MLP(mlp_units, name="mlp_output")
+        self.mlp = MLP(config, mlp_units, name="mlp_output")
 
         self.layernorm_before = tf.keras.layers.LayerNormalization(
             epsilon=config.layer_norm_eps,
