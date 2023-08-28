@@ -4,7 +4,7 @@ import numpy as np
 from collections import * 
 from ml_collections import ConfigDict 
 from typing import * 
-from ...layers import InvertedResidual, act_layer_factory, norm_layer_factory
+from ...layers import InvertedResidualLayer, act_layer_factory, norm_layer_factory
 
 
 class MobileNetBlock(tf.keras.Model):
