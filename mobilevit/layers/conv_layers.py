@@ -12,7 +12,7 @@ class MobileViTConvLayer(tf.keras.layers.Layer):
                out_channels: int, 
                kernel_size: int | Tuple, 
                config: ConfigDict,
-               strides: int | Tuple = 1, 
+               stride: int | Tuple = 1, 
                groups: int = 1, 
                bias: bool = False, 
                dilation: int = 1, 
@@ -31,7 +31,7 @@ class MobileViTConvLayer(tf.keras.layers.Layer):
     self.conv = tf.keras.layers.Conv2D(
                     kernel_size = kernel_size,
                     filters = out_channels,
-                    strides = strides,
+                    strides = stride,
                     groups = groups,
                     use_bias = bias,
                     dilation_rate = dilation
