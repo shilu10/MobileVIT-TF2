@@ -3,6 +3,8 @@ from tensorflow import keras
 import numpy as np 
 from typing import *
 from ml_collections import ConfigDict
+from .factory import act_layer_factory, norm_layer_factory
+
 
 ## new 
 class MobileViTConvLayer(tf.keras.layers.Layer):

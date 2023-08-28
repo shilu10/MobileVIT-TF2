@@ -4,7 +4,7 @@ import numpy as np
 from typing import * 
 from ml_collections import ConfigDict
 from .transformer_block import MobileViTTransformer
-from ..layers import InvertedResidualLayer, MobileViTConvLayer
+from ..layers import InvertedResidualLayer, MobileViTConvLayer, act_layer_factory, norm_layer_factory
 
 
 class MobileVITLayer(tf.keras.layers.Layer):
