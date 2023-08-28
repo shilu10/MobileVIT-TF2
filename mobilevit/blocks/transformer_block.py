@@ -34,7 +34,7 @@ class MobileViTTransformer(tf.keras.Model):
 
         for layer_module in self._layers:
             hidden_states = layer_module(hidden_states, training=training)
-        return hidden_statess
+        return hidden_states
 
     def get_config(self):
         config = super().get_config()
