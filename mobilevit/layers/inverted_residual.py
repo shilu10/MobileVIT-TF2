@@ -82,6 +82,86 @@ class InvertedResidualLayer(tf.keras.layers.Layer):
     return cls(**config)
 
 
+class InvertedResidualLayerV2(tf.keras.layers.Layer):
+  def __init__(self,
+               config: ConfigDict,
+               in_channels: int,
+               out_channels: int,
+               stride: int,
+               dilation: int = 1,
+               **kwargs) -> None:
+    super(InvertedResidualLayerV2, self).__init__(**kwargs)
+
+    self.config = config
+    expanded_channels = make_divisible(int(round(in_channels * config.expand_ratio)), 8)
+
+    if stride not in [1, 2]:
+      raise ValueError(f"Invalid stride {stride}.")
+
+    self.use_residual = (stride == 1) and (in_channels == out_channels)
+
+    # pw
+    # down-sample in the first conv
+    self.expand_1x1 = MobileViTV2ConvLayer(
+            config=config,
+            in_channels=in_channels,
+            out_channels=expanded_channels,
+            kernel_size=1
+        )
+
+    # DW
+    self.conv_3x3 = MobileViTV2ConvLayer(
+            config=config,
+            in_channels=in_channels,
+            out_channels=expanded_channels,
+            kernel_size=3,
+            stride=stride,
+            groups=expanded_channels,
+            dilation=dilation,
+        )
+
+    # pw
+    # up-smaple in last conv
+    self.reduce_1x1 = MobileViTV2ConvLayer(
+            config=config,
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=1,
+            use_act=False,
+        )
+
+    self.in_channels = in_channels
+    self.out_channels = out_channels
+
+  def call(self,
+           x: tf.Tensor,
+            training: bool = False) -> tf.Tensor:
+
+    # shortcut for the resiudal
+    shortcut = x
+
+    x = self.expand_1x1(x, training=training)
+    x = self.conv_3x3(x, training=training)
+    x = self.reduce_1x1(x, training=training)
+
+    return shortcut + x if self.use_residual else x
+
+  def get_config(self) -> Dict:
+    config = super().get_config()
+    config.update(
+        {
+            "in_channels": self.in_channels,
+            "out_channels": self.out_channels
+        }
+      )
+
+    return config
+
+  @classmethod
+  def from_config(cls, config):
+    return cls(**config)
+
+
 def make_divisible(value: int,
                    divisor: int = 8,
                    min_value: Optional[int] = None) -> int:
