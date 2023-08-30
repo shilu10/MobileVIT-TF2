@@ -1,3 +1,3 @@
-from .transformer_block import MobileViTTransformer 
-from .mobilevit_block import MobileVITLayer
-from .mobilenet_block import MobileNetBlock
+from .transformer_block import MobileViTTransformer, MobileViTV2Transformer
+from .mobilevit_block import MobileVITLayer, MobileViTV2Layer
+from .mobilenet_block import MobileNetBlock, MobileNetBlockV2

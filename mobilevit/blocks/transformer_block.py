@@ -3,7 +3,9 @@ from tensorflow import keras
 import numpy as np 
 from typing import * 
 from ml_collections import ConfigDict 
-from .vision_transformer import TFVITTransformerLayer, act_layer_factory, norm_layer_factory
+from ..layers import  act_layer_factory, norm_layer_factory
+from .vision_transformer import TFVITTransformerLayer
+from .seperable_self_attention import MobileViTV2TransformerLayer
 
 
 class MobileViTTransformer(tf.keras.Model):
@@ -51,3 +53,28 @@ class MobileViTTransformer(tf.keras.Model):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+
+
+class MobileViTV2Transformer(tf.keras.Model):
+    def __init__(self, config: ConfigDict, n_layers: int, d_model: int) -> None:
+        super().__init__()
+
+        ffn_multiplier = config.ffn_multiplier
+
+        ffn_dims = [ffn_multiplier * d_model] * n_layers
+
+        # ensure that dims are multiple of 16
+        ffn_dims = [int((d // 16) * 16) for d in ffn_dims]
+
+        self._layers = []
+        for block_idx in range(n_layers):
+            transformer_layer = MobileViTV2TransformerLayer(
+                config, embed_dim=d_model, ffn_latent_dim=ffn_dims[block_idx]
+            )
+            self._layers.append(transformer_layer)
+
+    def call(self, hidden_states: tf.Tensor) -> tf.Tensor:
+        for layer_module in self._layers:
+            hidden_states = layer_module(hidden_states)
+
+        return hidden_states
